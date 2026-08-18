@@ -16,6 +16,11 @@ require('./GameEvents/GameEvents.js');
 // 3. 世界核心（自动注册 tick 事件并启动循环）
 require('./GameWorld.js');
 
+// server.js 中原本引用 cdn 的位置改为：
+const CDN = require('./cdn.js');
+const cdn = new CDN(__dirname).load();   // 在启动时加载并压缩
+cdn.register(app);
+
 console.log('[server] 核心模块加载完成，等待 tick 事件...');
 
 // 5. 读取 RPC 映射（仅用于测试）
