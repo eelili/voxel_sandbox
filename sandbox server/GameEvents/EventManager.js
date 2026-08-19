@@ -1,5 +1,8 @@
-// EventManager.js - 全局事件管理器（去除硬编码业务事件注册）
+// EventManager.js - 全局事件管理器（完整支持面向对象事件）
 const GameEvent = require('./GameEvent.js');
+
+// 内部事件秘钥（仅引擎内部使用）
+const INTERNAL_SECRET = '5f3c9a2e8d1b7f4a6c0e9d2b8f4a7c1e3d5f9b2a4c6e8d0f1a3b5c7d9e0f2a4c';
 
 class EventManager {
     constructor() {
@@ -7,7 +10,6 @@ class EventManager {
         this._nameToCode = new Map();
         this._maxCode = 10000;          // 自定义事件起始编号
         this._listenersByTarget = new WeakMap();
-        // 不再自动注册任何业务事件
     }
 
     /**
@@ -16,15 +18,17 @@ class EventManager {
      * @param {number|Object} codeOrOptions - 编号或配置对象
      * @param {Object} options - 配置（若第二个参数为编号）
      * @param {string} options.secret - 业务事件秘钥（内部号段必须提供）
+     * @param {Function} options.targetType - 对象事件的目标类型构造函数（仅内部号段可用）
      * @returns {GameEvent} 事件实例
      */
     register(name, codeOrOptions, options = {}) {
-        let code, secret, trigger, description;
+        let code, secret, trigger, description, targetType;
         if (typeof codeOrOptions === 'number') {
             code = codeOrOptions;
             secret = options.secret || null;
             trigger = options.trigger || null;
             description = options.description || '';
+            targetType = options.targetType || null;
         } else {
             // 自动分配编号
             options = codeOrOptions || {};
@@ -35,6 +39,7 @@ class EventManager {
             secret = options.secret || null;
             trigger = options.trigger || null;
             description = options.description || '';
+            targetType = options.targetType || null;
         }
 
         // 检查名称唯一性
@@ -46,16 +51,19 @@ class EventManager {
             throw new Error(`事件编号 ${code} 已被占用`);
         }
 
-        // 如果编号在内部号段（<10000），必须提供有效的 secret
+        // 内部号段（<10000）必须提供正确的 secret
         if (code < 10000) {
-            if (!secret) {
-                throw new Error(`注册内部号段事件 (code=${code}) 必须提供 secret`);
+            if (secret !== INTERNAL_SECRET) {
+                throw new Error(`注册内部号段事件 (code=${code}) 必须提供正确的 secret`);
             }
-            // 此处可添加秘钥验证逻辑（例如检查是否等于已知的业务秘钥），但由业务模块保证
+            // 内部号段允许指定 targetType（面向对象事件）
         } else {
-            // 自定义事件禁止使用 secret（防止误用）
+            // 自定义事件禁止使用 secret 和 targetType
             if (secret) {
                 throw new Error(`自定义事件 (code=${code}) 不允许指定 secret`);
+            }
+            if (targetType) {
+                throw new Error(`自定义事件 (code=${code}) 不允许指定 targetType（仅内部号段可用）`);
             }
         }
 
@@ -63,7 +71,7 @@ class EventManager {
             description,
             trigger,
             secret,
-            targetType: null // 暂不支持对象事件，可后续扩展
+            targetType
         });
         this._eventsByCode.set(code, event);
         this._nameToCode.set(name, code);
