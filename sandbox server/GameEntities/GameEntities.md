@@ -171,7 +171,7 @@
 **示例**
 
 <pre><code>const box = entities.create({
-    model: 'model/box.vb',
+    model: 'temp/box.vox',
     position: new GameVector3(10, 5, 10),
     color: new GameRGBAColor(1, 0, 0, 1),
     collides: true,
